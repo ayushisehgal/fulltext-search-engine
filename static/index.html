@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Index &mdash; Full-Text Search Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F7F5F0;
+    --paper-card:#FFFFFF;
+    --ink:#1A2238;
+    --ink-soft:#5B6486;
+    --rule:#D8D4C8;
+    --relevance:#3D5A80;
+    --boost:#C98A2C;
+    --correction:#B33F3F;
+    --focus:#1A2238;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    min-height:100vh;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  header{
+    border-bottom:1.5px solid var(--ink);
+    padding:28px 32px 20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  .brand{display:flex;flex-direction:column;gap:2px;}
+  .brand .mark{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    letter-spacing:.14em;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+  }
+  .brand h1{
+    margin:0;
+    font-size:26px;
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  .stats{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    display:flex;
+    gap:18px;
+    text-align:right;
+  }
+  .stats b{color:var(--ink); font-weight:700;}
+
+  main{
+    max-width:980px;
+    margin:0 auto;
+    padding:36px 24px 80px;
+  }
+
+  .search-row{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    border-bottom:1.5px solid var(--ink);
+    padding-bottom:14px;
+  }
+  .search-row input[type=text]{
+    flex:1;
+    border:none;
+    background:transparent;
+    font-family:'JetBrains Mono',monospace;
+    font-size:20px;
+    color:var(--ink);
+    outline:none;
+    padding:6px 2px;
+  }
+  .search-row input[type=text]::placeholder{color:#B8B2A0;}
+  .search-row .prompt{font-family:'JetBrains Mono',monospace;font-size:20px;color:var(--boost);}
+
+  .controls{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    padding:10px 2px 0;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+  }
+  .controls label{display:flex;align-items:center;gap:6px;}
+  .controls input[type=range]{width:110px; accent-color:var(--boost);}
+  .controls .val{color:var(--ink); font-weight:700;}
+
+  /* ---- query decomposition strip: the "how the engine sees your query" panel ---- */
+  .decomp{
+    margin-top:18px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    min-height:34px;
+  }
+  .chip{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    padding:5px 10px;
+    border:1px solid var(--rule);
+    border-radius:3px;
+    background:var(--paper-card);
+    color:var(--ink-soft);
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .chip .tok{color:var(--ink); font-weight:700;}
+  .chip.corrected{border-color:var(--correction); color:var(--correction);}
+  .chip.corrected .arrow{opacity:.6;}
+  .chip.corrected .fix{color:var(--correction); font-weight:700;}
+
+  .meta-line{
+    margin-top:14px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    display:flex;
+    justify-content:space-between;
+    border-top:1px dashed var(--rule);
+    padding-top:10px;
+  }
+  .meta-line .timing b{color:var(--ink);}
+  .legend{display:flex; gap:14px;}
+  .legend span{display:flex; align-items:center; gap:5px;}
+  .swatch{width:9px;height:9px;display:inline-block;border-radius:1px;}
+  .swatch.relevance{background:var(--relevance);}
+  .swatch.boost{background:var(--boost);}
+
+  /* ---- results as index cards ---- */
+  .results{margin-top:22px; display:flex; flex-direction:column; gap:14px;}
+  .card{
+    background:var(--paper-card);
+    border:1px solid var(--rule);
+    border-radius:4px;
+    padding:16px 18px;
+    position:relative;
+    animation:rise .28s ease both;
+  }
+  @keyframes rise{
+    from{opacity:0; transform:translateY(6px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+  .card-top{display:flex; justify-content:space-between; align-items:baseline; gap:12px;}
+  .card-title{font-size:16px; font-weight:700;}
+  .card-id{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-soft);}
+  .card-body{margin:6px 0 12px; font-size:13.5px; color:var(--ink-soft); line-height:1.5;}
+
+  .flag-tag{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:.06em;
+    color:#fff;
+    background:var(--boost);
+    padding:2px 7px;
+    border-radius:2px;
+    text-transform:uppercase;
+  }
+
+  .score-row{display:flex; align-items:center; gap:10px;}
+  .score-bar{
+    flex:1;
+    height:8px;
+    background:#EFEBE0;
+    border-radius:2px;
+    overflow:hidden;
+    display:flex;
+  }
+  .score-bar .seg-relevance{background:var(--relevance); height:100%;}
+  .score-bar .seg-boost{background:var(--boost); height:100%;}
+  .score-num{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--ink-soft); width:64px; text-align:right;}
+
+  .empty{
+    margin-top:60px;
+    text-align:center;
+    color:var(--ink-soft);
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+  }
+  .empty .big{font-size:34px; margin-bottom:10px; color:var(--ink);}
+
+  @media (prefers-reduced-motion: reduce){
+    .card{animation:none;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="mark">FTS5 &middot; BM25 &middot; SQLite</span>
+    <h1>Index.</h1>
+  </div>
+  <div class="stats mono" id="stats">
+    <div><b id="statDocs">&mdash;</b> documents</div>
+    <div><b id="statFlagged">&mdash;</b> flagged</div>
+  </div>
+</header>
+
+<main>
+  <div class="search-row">
+    <span class="prompt">&gt;</span>
+    <input type="text" id="q" placeholder="search... try a typo, a partial word, or multiple terms" autofocus autocomplete="off">
+  </div>
+
+  <div class="controls">
+    <label>flag boost
+      <input type="range" id="boost" min="1" max="5" step="0.5" value="2">
+      <span class="val mono" id="boostVal">2.0&times;</span>
+    </label>
+    <label>results
+      <input type="range" id="limit" min="3" max="20" step="1" value="10">
+      <span class="val mono" id="limitVal">10</span>
+    </label>
+  </div>
+
+  <div class="decomp" id="decomp"></div>
+
+  <div class="meta-line">
+    <div class="timing">query time <b id="timing">&mdash;</b> ms</div>
+    <div class="legend">
+      <span><i class="swatch relevance"></i>relevance (bm25)</span>
+      <span><i class="swatch boost"></i>flag boost</span>
+    </div>
+  </div>
+
+  <div class="results" id="results"></div>
+  <div class="empty" id="empty" style="display:none;">
+    <div class="big">&mdash;</div>
+    no matches indexed for this query
+  </div>
+</main>
+
+<script>
+const qInput = document.getElementById('q');
+const boostInput = document.getElementById('boost');
+const limitInput = document.getElementById('limit');
+const boostVal = document.getElementById('boostVal');
+const limitVal = document.getElementById('limitVal');
+const resultsEl = document.getElementById('results');
+const decompEl = document.getElementById('decomp');
+const timingEl = document.getElementById('timing');
+const emptyEl = document.getElementById('empty');
+
+let debounceTimer = null;
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+async function loadStats(){
+  try{
+    const r = await fetch('/api/stats');
+    const d = await r.json();
+    document.getElementById('statDocs').textContent = d.total_documents;
+    document.getElementById('statFlagged').textContent = d.flagged_documents;
+  }catch(e){ /* stats are non-critical */ }
+}
+
+function renderDecomp(query, corrected){
+  const tokens = query.trim().split(/\s+/).filter(Boolean);
+  if(tokens.length === 0){ decompEl.innerHTML = ''; return; }
+  decompEl.innerHTML = tokens.map(t => {
+    const lower = t.toLowerCase();
+    const fix = corrected[lower];
+    if(fix){
+      return `<div class="chip corrected"><span class="tok">${escapeHtml(t)}*</span><span class="arrow">&rarr;</span><span class="fix">${escapeHtml(fix)}*</span></div>`;
+    }
+    return `<div class="chip"><span class="tok">${escapeHtml(t)}*</span></div>`;
+  }).join('');
+}
+
+function renderResults(results){
+  if(results.length === 0){
+    resultsEl.innerHTML = '';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  const maxScore = Math.max(...results.map(r => r.score), 0.0001);
+
+  resultsEl.innerHTML = results.map(r => {
+    const relPct = Math.max(0, (r.base_score / maxScore) * 100);
+    const boostPct = Math.max(0, (r.boost_score / maxScore) * 100);
+    return `
+      <div class="card">
+        <div class="card-top">
+          <div class="card-title">${escapeHtml(r.title)} ${r.flagged ? '<span class="flag-tag">flagged</span>' : ''}</div>
+          <div class="card-id mono">#${r.id}</div>
+        </div>
+        <div class="card-body">${escapeHtml(r.body)}</div>
+        <div class="score-row">
+          <div class="score-bar">
+            <div class="seg-relevance" style="width:${relPct}%"></div>
+            <div class="seg-boost" style="width:${boostPct}%"></div>
+          </div>
+          <div class="score-num mono">${r.score.toFixed(3)}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function runSearch(){
+  const query = qInput.value;
+  if(!query.trim()){
+    resultsEl.innerHTML = '';
+    decompEl.innerHTML = '';
+    emptyEl.style.display = 'none';
+    timingEl.textContent = '\u2014';
+    return;
+  }
+  const boost = boostInput.value;
+  const limit = limitInput.value;
+  const url = `/api/search?q=${encodeURIComponent(query)}&flag_boost=${boost}&limit=${limit}`;
+  const r = await fetch(url);
+  const data = await r.json();
+  timingEl.textContent = data.elapsed_ms.toFixed(2);
+  renderDecomp(query, data.corrected_terms || {});
+  renderResults(data.results);
+}
+
+qInput.addEventListener('input', () => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(runSearch, 180);
+});
+boostInput.addEventListener('input', () => {
+  boostVal.textContent = parseFloat(boostInput.value).toFixed(1) + '\u00d7';
+  runSearch();
+});
+limitInput.addEventListener('input', () => {
+  limitVal.textContent = limitInput.value;
+  runSearch();
+});
+
+loadStats();
+</script>
+</body>
+</html>

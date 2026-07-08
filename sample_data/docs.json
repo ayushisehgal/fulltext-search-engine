@@ -1,0 +1,12 @@
+[
+  {"title": "Python Basics", "body": "Python is a popular high level programming language known for readability.", "flagged": false},
+  {"title": "Python Dictionaries", "body": "A dictionary in Python stores key value pairs and allows fast lookups.", "flagged": true},
+  {"title": "Learning JavaScript", "body": "JavaScript runs in the browser and powers interactive web pages.", "flagged": false},
+  {"title": "Introduction to Databases", "body": "Databases store structured data and support queries like search and filter.", "flagged": false},
+  {"title": "Search Engines Explained", "body": "A search engine indexes documents and returns ranked results for a query.", "flagged": true},
+  {"title": "Machine Learning Overview", "body": "Machine learning models learn patterns from data to make predictions.", "flagged": false},
+  {"title": "Data Structures 101", "body": "Common data structures include arrays, linked lists, trees and hash maps.", "flagged": false},
+  {"title": "Web Development Guide", "body": "Web development involves building websites using HTML CSS and JavaScript.", "flagged": false},
+  {"title": "Understanding APIs", "body": "An API lets two software systems communicate using defined requests.", "flagged": false},
+  {"title": "SQL for Beginners", "body": "SQL is a language used to query and manage relational databases.", "flagged": true}
+]

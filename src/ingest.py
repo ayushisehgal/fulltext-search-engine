@@ -16,6 +16,11 @@ Two things make that true here:
 Batching also matters for low-resource machines: committing one
 transaction per 200 documents does far fewer fsyncs than one per document,
 which is the dominant cost on a slow/inefficient SSD.
+
+NOTE: Both write paths accept an optional `corrector`. After every commit
+that changes the documents table, we invalidate its cached vocabulary
+(see spellcheck.py) so newly-ingested words are correctable immediately,
+instead of only after the process restarts.
 """
 
 import queue
@@ -26,10 +31,11 @@ from .db import get_connection
 
 
 class BackgroundIngestor:
-    def __init__(self, db_path: str, batch_size: int = 200, flush_interval: float = 0.5):
+    def __init__(self, db_path: str, batch_size: int = 200, flush_interval: float = 0.5, corrector=None):
         self.db_path = db_path
         self.batch_size = batch_size
         self.flush_interval = flush_interval
+        self.corrector = corrector
         self._queue: queue.Queue = queue.Queue()
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._run, daemon=True)
@@ -70,6 +76,8 @@ class BackgroundIngestor:
             buffer,
         )
         conn.commit()
+        if self.corrector is not None:
+            self.corrector.invalidate()
 
     def stop(self, wait: bool = True) -> None:
         self._stop.set()
@@ -77,7 +85,7 @@ class BackgroundIngestor:
             self._thread.join()
 
 
-def bulk_load_sync(conn, docs) -> int:
+def bulk_load_sync(conn, docs, corrector=None) -> int:
     """
     Synchronous bulk loader for the common "load a big initial dataset
     once at startup" case - simpler than the background queue when you
@@ -89,4 +97,6 @@ def bulk_load_sync(conn, docs) -> int:
         [(d["title"], d["body"], int(d.get("flagged", False))) for d in docs],
     )
     conn.commit()
+    if corrector is not None:
+        corrector.invalidate()
     return len(docs)

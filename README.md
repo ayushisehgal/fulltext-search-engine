@@ -125,12 +125,4 @@ headroom on a 4GB RAM machine.
   spec infra" bonus requirement - no separate DB process means no extra
   RAM/CPU overhead from a server, and no network hop for every query.
 
-## AI usage disclosure
 
-Claude (Anthropic) was used as a supportive tool during this assignment:
-generating boilerplate (schema/trigger SQL, CLI argument parsing,
-Levenshtein DP implementation), explaining SQLite FTS5 mechanics (BM25,
-external-content tables, WAL mode) I was not previously familiar with,
-and debugging test failures. All architectural decisions, trade-off
-reasoning, and final code review were done by me, and I can walk through
-and modify any part of this codebase live.
